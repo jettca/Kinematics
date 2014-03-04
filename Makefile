@@ -11,7 +11,7 @@ ifeq ($(UNAME), Darwin)
 endif
 
 # Link for target
-$(TARGET): $(OBJDIR)/main.o $(OBJDIR)/skeleton.o $(OBJDIR)/joint.o
+$(TARGET): $(OBJDIR)/main.o $(OBJDIR)/skeleton.o $(OBJDIR)/joint.o $(OBJDIR)/point.o
 	mkdir -p bin
 	$(CC) $(CFLAGS) $(OBJDIR)/* -o $(TARGET) $(LIBRARIES)
 
@@ -20,11 +20,14 @@ $(OBJDIR)/main.o: $(SRCDIR)/main.cpp
 	mkdir -p $(OBJDIR)
 	$(CC) $(CFLAGS) -c $(SRCDIR)/main.cpp -o $(OBJDIR)/main.o
 
-$(OBJDIR)/skeleton.o: $(SRCDIR)/skeleton.cpp $(SRCDIR)/skeleton.h
+$(OBJDIR)/skeleton.o: $(SRCDIR)/skeleton.cpp $(SRCDIR)/skeleton.h $(SRCDIR)/joint.h
 	$(CC) $(CFLAGS) -c $(SRCDIR)/skeleton.cpp -o $(OBJDIR)/skeleton.o
 
-$(OBJDIR)/joint.o: $(SRCDIR)/joint.cpp $(SRCDIR)/joint.h
+$(OBJDIR)/joint.o: $(SRCDIR)/joint.cpp $(SRCDIR)/joint.h $(SRCDIR)/point.h
 	$(CC) $(CFLAGS) -c $(SRCDIR)/joint.cpp -o $(OBJDIR)/joint.o
+
+$(OBJDIR)/point.o: $(SRCDIR)/point.cpp $(SRCDIR)/point.h
+	$(CC) $(CFLAGS) -c $(SRCDIR)/point.cpp -o $(OBJDIR)/point.o
 
 .PHONY: clean
 clean:

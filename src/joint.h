@@ -1,16 +1,16 @@
 #include <iostream>
 
+#include "point.h"
+
 class joint
 {
     public:
-        joint();
-        joint(double x, double y, joint *parent);
+        joint(point pos, joint *parent);
 
-        double getx();
-        double gety();
+        point getpos();
         const joint *getparent();
 
     private:
-        double x, y;
+        point pos;
         joint *parent;
 };

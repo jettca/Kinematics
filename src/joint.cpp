@@ -1,25 +1,13 @@
 #include "joint.h"
 
-joint::joint() :
-    x(0),
-    y(0),
-    parent(NULL)
-{}
-
-joint::joint(double x, double y, joint *parent) :
-    x(x),
-    y(y),
+joint::joint(point pos, joint *parent) :
+    pos(pos),
     parent(parent)
 {}
 
-double joint::getx()
+point joint::getpos()
 {
-    return x;
-}
-
-double joint::gety()
-{
-    return y;
+    return pos;
 }
 
 const joint *joint::getparent()

@@ -7,7 +7,7 @@
 #include "skeleton.h"
 
 skeleton::skeleton(string skl_file) :
-    root()
+    root(point(0, 0, 0), NULL)
 {
 }
 
