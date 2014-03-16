@@ -4,6 +4,12 @@
 
 using namespace std;
 
+point::point() :
+    x(0),
+    y(0),
+    z(0)
+{}
+
 point::point(double x, double y, double z) :
     x(x),
     y(y),
