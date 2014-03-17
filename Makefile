@@ -3,7 +3,7 @@ CFLAGS = -g -Wall
 TARGET = bin/main
 OBJDIR = obj
 SRCDIR = src
-LIBRARIES = -I /usr/X11R6/include/ -L /usr/X11R6/lib64/ -lglut -lGL -lGLU -lX11 -lXmu -lXi -lm
+LIBRARIES = -I /usr/X11R6/include/ -L /usr/X11R6/lib64/ -lglut -lGL -lGLU -lX11 -lXmu -lXi -lm -I./src/Eigen
 UNAME = $(shell uname)
 OPS = -Wno-deprecated
 

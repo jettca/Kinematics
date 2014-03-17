@@ -4,7 +4,10 @@
 #   include <GL/glut.h>
 #endif
 
+#include <math.h>
+
 #include "joint.h"
+#include "quaternion.h"
 
 joint::joint() :
     length(),
@@ -49,11 +52,52 @@ void joint::addChild(joint *child)
 void joint::rotate(double phi)
 {
     theta = theta + phi;
+    if(theta >= 360)
+        theta -= 360;
+    else if(theta < 0)
+        theta += 360;
 }
 
 void joint::draw() const
 {
     glCallList(displist);
+}
+
+point joint::derivativeAll(joint *j, point p) const
+{
+    double dtheta = .001;
+    j->rotate(-dtheta);
+    point p1 = applyAll();
+    j->rotate(2*dtheta);
+    point p2 = applyAll();
+    j->rotate(-dtheta);
+    return p2.plus(p1.times(-1)).times(1/(2*dtheta));
+}
+
+point joint::apply(point p) const
+{
+    p = p.plus(point(0, 0, length));
+    quaternion q = makeQuaternion(theta, axis);
+    return q.rotate(p);
+}
+
+point joint::applyAll() const
+{
+    const joint* j = this;
+    point pos(0, 0, 0);
+
+    while(j->parent != NULL)
+    {
+        pos = j->apply(pos);
+        j = j->parent;
+    }
+
+    return pos;
+}
+
+void joint::settheta(double t)
+{
+    theta = t;
 }
 
 double joint::getlength() const

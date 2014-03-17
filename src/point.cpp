@@ -16,12 +16,12 @@ point::point(double x, double y, double z) :
     z(z)
 {}
 
-double point::magnitude()
+double point::magnitude() const
 {
     return sqrt(x*x + y*y + z*z);
 }
 
-point point::normalize()
+point point::normalize() const
 {
     double m = magnitude();
     if(m > 0)
@@ -30,42 +30,42 @@ point point::normalize()
         return *this;
 }
 
-point point::times(double a)
+point point::times(double a) const
 {
     return point(x*a, y*a, z*a);
 }
 
-point point::plus(point p)
+point point::plus(point p) const
 {
     return point(x + p.getx(), y + p.gety(), z + p.getz());
 }
 
-double point::dot(point p)
+double point::dot(point p) const
 {
     return x*p.getx() + y*p.gety() + z*p.getz();
 }
 
-point point::cross(point p)
+point point::cross(point p) const
 {
     return point(y*p.getz()-z*p.gety(), z*p.getx()-x*p.getz(), x*p.gety()-y*p.getx());
 }
 
-double point::getx()
+double point::getx() const
 {
     return x;
 }
 
-double point::gety()
+double point::gety() const
 {
     return y;
 }
 
-double point::getz()
+double point::getz() const
 {
     return z;
 }
 
-void point::print()
+void point::print() const
 {
     cout << x << " " << y << " " << z << endl;
 }

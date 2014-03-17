@@ -14,7 +14,11 @@ class joint
         void addChild(joint *child);
         void rotate(double phi);
         void draw() const;
+        point derivativeAll(joint* j, point p) const;
+        point apply(point p) const;
+        point applyAll() const;
 
+        void settheta(double t);
         double getlength() const;
         point getaxis() const;
         double gettheta() const;

@@ -9,6 +9,9 @@
 #include <sstream>
 
 #include "skeleton.h"
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include <math.h>
 
 #define BUFFER_LENGTH 64
 
@@ -23,20 +26,70 @@ GLfloat mat_diffuse[] = {0.6, 0.6, 0.6, 1.0};
 GLfloat mat_specular[] = {1.0, 1.0, 1.0, 1.0};
 GLfloat mat_shininess[] = {50.0};
 
-// Skeletons
-string skel_dir1("static/skeleton1.skl");
-skeleton robot;
 
-// Input stuff
-int selectedJoint = -1;
+// Skeletons
+skeleton robot;
 vector<joint*> joints;
-GLint viewport[4];
-bool UDRL[4] = {false, false, false, false};
+vector<joint*> actuators;
 
 // Clipping
-GLdouble fovy = 45;
-GLdouble zNear = 1;
-GLdouble zFar = 100;
+float fovy = 45;
+float zNear = .01;
+float zFar = 100;
+int win_width = 800;
+int win_height = 600;
+glm::mat4 projection = glm::perspective(fovy, (float)win_width/win_height, zNear, zFar);
+
+glm::mat4 viewR;
+glm::mat4 viewT;
+
+// Input
+int selected = -1;
+vector<point> xydpoints;
+bool UDRL[4] = {false, false, false, false};
+bool RM = false;
+bool LM = false;
+point clickpos;
+
+// FK/IK
+int mode = 1;
+double radius = .1;
+vector<point> targets;
+vector<joint*> sources;
+
+point mouseToObj(point xyd)
+{
+    int mx = xyd.getx();
+    int my = xyd.gety();
+    double depth = xyd.getz();
+
+    float clipx = 2.0*mx/win_width - 1;
+    float clipy = 2.0*(win_height - my)/win_height - 1;
+    glm::vec4 clip1 = projection*viewT*glm::vec4(0, 0, depth, 1);
+    glm::vec4 clip(clipx, clipy, clip1.z/clip1.w, 1);
+
+    glm::vec4 world = glm::inverse(projection*viewT*viewR)*clip;
+
+    return point(world.x/world.w, world.y/world.w, world.z/world.w);
+}
+
+void drawTargets()
+{
+    for(int i = 0; i < targets.size(); i++)
+    {
+        glPushMatrix();
+        {
+            glPushName(joints.size() + i);
+            point target = targets.at(i);
+
+            glTranslatef(target.getx(), target.gety(), target.getz());
+            glutSolidSphere(radius, 10, 10);
+
+            glPopName();
+        }
+        glPopMatrix();
+    }
+}
 
 void initLights()
 {
@@ -53,6 +106,27 @@ void initLights()
     glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
 }
 
+void setCamera()
+{
+    glTranslatef(-camPosX, -camPosY, -camPosZ);
+    glRotatef(camRotY, 0, 1, 0);
+    viewR = glm::rotate(glm::mat4(1.0f), camRotY, glm::vec3(0, 1, 0));
+    viewT = glm::translate(glm::mat4(1.0f), glm::vec3(-camPosX, -camPosY, -camPosZ));
+}
+
+void setTargets()
+{
+    glPushMatrix();
+    {
+        setCamera();
+        for(int i = 0; i < targets.size(); i++)
+        {
+            targets[i] = mouseToObj(xydpoints.at(i));
+        }
+    }
+    glPopMatrix();
+}
+
 void setupRC()
 {
     // Place Camera
@@ -61,27 +135,22 @@ void setupRC()
     camPosZ = 15.0f;
     camRotY = 0.0f;
     
+    glEnable(GL_DEPTH);
     glEnable(GL_DEPTH_TEST);
+    glDepthMask(GL_TRUE);
+    glDepthRange(0.0f, 1.0f);
+
     glShadeModel(GL_SMOOTH);
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     initLights();
 }
 
-void loadRobot()
+void loadRobot(string skel_dir)
 {
-    robot = *(new skeleton(skel_dir1, 0));
-    int size = robot.numJoints();
-    for(int i = 0; i < size; i++)
-    {
-        joint* j = robot.getjoint(i);
-        joints.push_back(j);
-    }
-}
+    robot = *(new skeleton(skel_dir, 0));
 
-void setCamera()
-{
-    glTranslatef(-camPosX, -camPosY, -camPosZ);
-    glRotatef(camRotY, 0, 1, 0);
+    joints = robot.getjoints();
+    actuators = robot.getactuators();
 }
 
 void reshape(int w, int h)
@@ -91,7 +160,7 @@ void reshape(int w, int h)
     glLoadIdentity();
     
     // Set the clipping volume
-    gluPerspective(45.0f, (GLfloat)w / (GLfloat)h, 1.0f, 100.0f);
+    gluPerspective(45.0f, (GLfloat)w / (GLfloat)h, zNear, zFar);
     
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -107,25 +176,24 @@ void drawText()
 
     vector<joint*>::iterator joint_it;
 
-
-    for(joint_it = joints.begin(); joint_it != joints.end(); joint_it++)
+    string text;
+    if(mode == 1)
     {
-        glPushMatrix();
-
-        ostringstream s;
-        s << (*joint_it)->gettheta();
-        string datum = s.str();
-
-        string::iterator digit;
-        for(digit = datum.begin(); digit != datum.end(); digit++)
-        {
-            glutStrokeCharacter(GLUT_STROKE_ROMAN, *digit);
-            glTranslatef(20, 0, 0);
-        }
-        glPopMatrix();
-
-        glTranslatef(0, -150, 0);
+        text = "Fordward Kinematics Mode";
     }
+    else
+    {
+        text = "Inverse Kinematics Mode";
+    }
+
+
+    string::iterator t_it;
+    for(t_it = text.begin(); t_it != text.end(); t_it++)
+    {
+        glutStrokeCharacter(GLUT_STROKE_ROMAN, *t_it);
+        glTranslatef(20, 0, 0);
+    }
+
     glPopMatrix();
 }
 
@@ -137,7 +205,11 @@ void display()
     {
         drawText();
         setCamera();
-        robot.draw();
+        if(mode == 2)
+        {
+            drawTargets();
+        }
+        robot.draw(mode);
     }
     glPopMatrix();
 
@@ -155,9 +227,13 @@ void processSelection(int x, int y)
 
     glMatrixMode(GL_PROJECTION);
 
+    glPopMatrix();
+
     glPushMatrix();
     {
         glRenderMode(GL_SELECT);
+        glInitNames();
+
         glLoadIdentity();
         gluPickMatrix(x, viewport[3] - y + viewport[1], .1, .1, viewport);
 
@@ -168,11 +244,12 @@ void processSelection(int x, int y)
         {
             drawText();
             setCamera();
-            robot.draw();
+            drawTargets();
+            robot.draw(mode);
         }
         glPopMatrix();
 
-        selectedJoint = selectBuff[3];
+        selected = selectBuff[3];
 
         glRenderMode(GL_RENDER);
         glMatrixMode(GL_PROJECTION);
@@ -180,13 +257,71 @@ void processSelection(int x, int y)
     glPopMatrix();
 
     glMatrixMode(GL_MODELVIEW);
+
+    if(mode == 2 && selected < joints.size())
+    {
+        joint *j = actuators.at(selected);
+        vector<joint*>::iterator tm_it = find(sources.begin(), sources.end(), j);
+        if(tm_it == sources.end())
+        {
+            sources.push_back(j);
+            point t = j->applyAll();
+            targets.push_back(t);
+            xydpoints.push_back(point(0, 0, 0));
+        }
+        else
+        {
+            sources.erase(tm_it);
+            int pos = tm_it - sources.begin();
+            targets.erase(pos + targets.begin());
+            xydpoints.erase(pos + xydpoints.begin());
+        }
+    }
 }
 
 void mouse(int button, int state, int x, int y)
 {
-    if(button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+    if(state == GLUT_DOWN)
     {
         processSelection(x, y);
+    }
+    if(button == GLUT_RIGHT_BUTTON)
+    {
+        if(state == GLUT_DOWN && selected >= joints.size())
+        {
+            RM = true;
+            clickpos = point(x, y, targets.at(selected-joints.size()).getz());
+        }
+        else
+        {
+            RM = false;
+        }
+    }
+    else
+    {
+        if(state == GLUT_DOWN && selected < joints.size() && selected >= 0)
+        {
+            LM = true;
+            clickpos = point(x, y, joints.at(selected)->gettheta());
+        }
+        else
+        {
+            LM = false;
+        }
+    }
+}
+
+void keyboard(unsigned char key, int x, int y)
+{
+    switch(key)
+    {
+        case ' ':
+            if(mode == 1)
+                mode = 2;
+            else
+                mode = 1;
+            selected = -1;
+            break;
     }
 }
 
@@ -230,41 +365,87 @@ void specialUp(int key, int x, int y)
 
 void update()
 {
-    if(UDRL[0])
-        if(selectedJoint != -1)
-            joints.at(selectedJoint)->rotate(5);
-    if(UDRL[1])
-        if(selectedJoint != -1)
-            joints.at(selectedJoint)->rotate(-5);
+    if(selected != -1 && mode == 1)
+    {
+        if(UDRL[0])
+        {
+            joints.at(selected)->rotate(5);
+        }
+        if(UDRL[1])
+        {
+            joints.at(selected)->rotate(-5);
+        }
+    }
+
     if(UDRL[2])
         camRotY += 3;
     if(UDRL[3])
         camRotY -= 3;
 
+    if(mode == 2)
+    {
+        robot.touch(sources, targets);
+    }
+
     glutPostRedisplay();
+}
+
+void trackMouse(int x, int y)
+{
+    if(mode == 2 && selected >= joints.size())
+    {
+        point *s = &xydpoints.at(selected - joints.size());
+        if(RM)
+        {
+            double shift = (clickpos.gety() - y)/50.;
+            *s = point(s->getx(), s->gety(), clickpos.getz()+shift);
+        }
+        else
+        {
+            *s = point(x, y, s->getz());
+        }
+        setTargets();
+    }
+    else if(mode == 1)
+    {
+        if(LM)
+        {
+            double shift = clickpos.gety() - y;
+            joints.at(selected)->settheta(clickpos.getz() + shift);
+        }
+    }
 }
 
 int main(int argc, char **argv)
 {
-    int win_width = 800;
-    int win_height = 600;
+    if(argc != 2)
+    {
+        printf("incorrect number of arguments\n");
+        exit(1);
+    }
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
     glutInitWindowSize(win_width, win_height);
     glutCreateWindow("jett has a new thing");
 
+    gluPerspective(fovy, (GLfloat)win_width/win_height, zNear, zFar);
+
     setupRC();
-    loadRobot();
+    loadRobot(string(argv[1]));
 
     glutDisplayFunc(display);
     glutReshapeFunc(reshape);
     glutMouseFunc(mouse);
+    glutKeyboardFunc(keyboard);
     glutSpecialFunc(special);
     glutSpecialUpFunc(specialUp);
     glutIdleFunc(update);
+    glutMotionFunc(trackMouse);
 
     glutMainLoop();
 
     delete &robot;
+
+    return 0;
 }

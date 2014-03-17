@@ -9,18 +9,18 @@ class point
     public:
         point();
         point(double x, double y, double z);
-        double magnitude();
-        point normalize();
-        point times(double a);
-        point plus(point p);
-        double dot(point p);
-        point cross(point p);
+        double magnitude() const;
+        point normalize() const;
+        point times(double a) const;
+        point plus(point p) const;
+        double dot(point p) const;
+        point cross(point p) const;
 
-        double getx();
-        double gety();
-        double getz();
+        double getx() const;
+        double gety() const;
+        double getz() const;
 
-        void print();
+        void print() const;
         
     private:
         double x, y, z;
