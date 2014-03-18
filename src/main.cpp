@@ -11,6 +11,7 @@
 #include "skeleton.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+#include <vector>
 #include <math.h>
 
 #define BUFFER_LENGTH 64
@@ -420,7 +421,7 @@ int main(int argc, char **argv)
 {
     if(argc != 2)
     {
-        printf("incorrect number of arguments\n");
+        cout << "incorrect number of arguments\n";
         exit(1);
     }
 
