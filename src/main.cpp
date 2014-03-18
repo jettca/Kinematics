@@ -266,11 +266,19 @@ void processSelection(int x, int y)
 
     glMatrixMode(GL_MODELVIEW);
 
-    if(mode == 2 && selected < joints.size())
+    if(mode == 2 && selected >=0 && selected < joints.size())
     {
         joint *j = actuators.at(selected);
-        vector<joint*>::iterator tm_it = find(sources.begin(), sources.end(), j);
-        if(tm_it == sources.end())
+        int foundPos = -1;
+        for(int i = 0; i < sources.size(); i++)
+        {
+            if(sources.at(i) == j)
+            {
+                foundPos = i;
+                break;
+            }
+        }
+        if(foundPos == -1)
         {
             sources.push_back(j);
             point t = j->applyAll();
@@ -279,10 +287,9 @@ void processSelection(int x, int y)
         }
         else
         {
-            sources.erase(tm_it);
-            int pos = tm_it - sources.begin();
-            targets.erase(pos + targets.begin());
-            xydpoints.erase(pos + xydpoints.begin());
+            sources.erase(foundPos + sources.begin());
+            targets.erase(foundPos + targets.begin());
+            xydpoints.erase(foundPos + xydpoints.begin());
         }
     }
 }
@@ -308,7 +315,7 @@ void mouse(int button, int state, int x, int y)
     }
     else if(button == GLUT_LEFT_BUTTON)
     {
-        if(state == GLUT_DOWN)
+        if(state == GLUT_DOWN && selected >= 0 && selected < joints.size())
         {
             LM = true;
             clickpos = point(x, y, joints.at(selected)->gettheta());
