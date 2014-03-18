@@ -193,10 +193,10 @@ void skeleton::freejoint(joint *j)
     delete j;
 }
 
-
+/* The following code is for calling the Eigen 
+ */
 using namespace Eigen;
 
-// Generic functor
 template<typename _Scalar, int NX=Dynamic, int NY=Dynamic>
 struct Functor
 {
@@ -216,9 +216,6 @@ struct Functor
 
     int inputs() const { return m_inputs; }
     int values() const { return m_values; }
-
-    // you should define that in the subclass :
-//    void operator() (const InputType& x, ValueType* v, JacobianType* _j=0) const;
 };
 
 int max(int x, int y)
@@ -239,6 +236,8 @@ struct dist_functor : Functor<double>
         acts = _acts;
         targets = _targets;
     };
+
+    // Calculates difference between target and actuator positions
     int operator()(const VectorXd &x, VectorXd &fvec) const
     {
         int tsize = targets.size();
@@ -266,6 +265,7 @@ struct dist_functor : Functor<double>
         return 0;
     }
 
+    // Calculates the Jacobian of the function to be optimixed
     int df(const VectorXd &x, MatrixXd &fjac) const
     {
         int tsize = targets.size();

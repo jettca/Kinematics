@@ -34,6 +34,7 @@ joint::joint(double length, double theta, point axis, joint *parent, int numchil
     slices = 20;
     stacks = 5;
 
+    // Set the display list for drawing the joint as a cylinder
     GLUquadric *jointQuadric = gluNewQuadric();
 
     glNewList(displist, GL_COMPILE);
@@ -65,6 +66,7 @@ void joint::draw() const
 
 point joint::derivativeAll(joint *j, point p) const
 {
+    // Performs a first order taylor approximation
     double dtheta = .001;
     j->rotate(-dtheta);
     point p1 = applyAll();

@@ -36,8 +36,8 @@ vector<joint*> actuators;
 float fovy = 45;
 float zNear = .01;
 float zFar = 100;
-int win_width = 800;
-int win_height = 600;
+int win_width = 960;
+int win_height = 540;
 glm::mat4 projection = glm::perspective(fovy, (float)win_width/win_height, zNear, zFar);
 
 glm::mat4 viewR;
@@ -57,6 +57,7 @@ double radius = .1;
 vector<point> targets;
 vector<joint*> sources;
 
+// Convert mouse coordinates + depth to world coordinates
 point mouseToObj(point xyd)
 {
     int mx = xyd.getx();
@@ -73,6 +74,7 @@ point mouseToObj(point xyd)
     return point(world.x/world.w, world.y/world.w, world.z/world.w);
 }
 
+// Draws target points for IK
 void drawTargets()
 {
     for(int i = 0; i < targets.size(); i++)
@@ -106,6 +108,7 @@ void initLights()
     glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
 }
 
+// Sets the camera and the corresponding glm matrices
 void setCamera()
 {
     glTranslatef(-camPosX, -camPosY, -camPosZ);
@@ -114,6 +117,7 @@ void setCamera()
     viewT = glm::translate(glm::mat4(1.0f), glm::vec3(-camPosX, -camPosY, -camPosZ));
 }
 
+// Sets the target positions based on the mouse coordinates
 void setTargets()
 {
     glPushMatrix();
@@ -145,6 +149,7 @@ void setupRC()
     initLights();
 }
 
+// loads the robot/skeleton
 void loadRobot(string skel_dir)
 {
     robot = *(new skeleton(skel_dir, 0));
@@ -166,6 +171,7 @@ void reshape(int w, int h)
     glLoadIdentity();
 }
 
+// Draws the information text
 void drawText()
 {
     glPushMatrix();
@@ -217,6 +223,7 @@ void display()
     glutSwapBuffers();
 }
 
+// Figures out what object you're selecting by name
 void processSelection(int x, int y)
 {
     static GLuint selectBuff[BUFFER_LENGTH];
@@ -279,6 +286,7 @@ void processSelection(int x, int y)
     }
 }
 
+// Sets mouse booleans, gets click positions, and finds selected object
 void mouse(int button, int state, int x, int y)
 {
     if(state == GLUT_DOWN)
@@ -297,9 +305,9 @@ void mouse(int button, int state, int x, int y)
             RM = false;
         }
     }
-    else
+    else if(button == GLUT_LEFT_BUTTON)
     {
-        if(state == GLUT_DOWN && selected < joints.size() && selected >= 0)
+        if(state == GLUT_DOWN)
         {
             LM = true;
             clickpos = point(x, y, joints.at(selected)->gettheta());
@@ -311,6 +319,7 @@ void mouse(int button, int state, int x, int y)
     }
 }
 
+// Switches between FK and IK mode
 void keyboard(unsigned char key, int x, int y)
 {
     switch(key)
@@ -325,6 +334,7 @@ void keyboard(unsigned char key, int x, int y)
     }
 }
 
+// Sets arrow key booleans
 void special(int key, int x, int y)
 {
     switch(key)
@@ -363,20 +373,9 @@ void specialUp(int key, int x, int y)
     }
 }
 
+// Repeatedly calls IK and processes rotation
 void update()
 {
-    if(selected != -1 && mode == 1)
-    {
-        if(UDRL[0])
-        {
-            joints.at(selected)->rotate(5);
-        }
-        if(UDRL[1])
-        {
-            joints.at(selected)->rotate(-5);
-        }
-    }
-
     if(UDRL[2])
         camRotY += 3;
     if(UDRL[3])
@@ -390,6 +389,7 @@ void update()
     glutPostRedisplay();
 }
 
+// Processes mouse movements for skeleton manipulation
 void trackMouse(int x, int y)
 {
     if(mode == 2 && selected >= joints.size())
@@ -408,7 +408,7 @@ void trackMouse(int x, int y)
     }
     else if(mode == 1)
     {
-        if(LM)
+        if(LM && selected >= 0 && selected <= joints.size())
         {
             double shift = clickpos.gety() - y;
             joints.at(selected)->settheta(clickpos.getz() + shift);
