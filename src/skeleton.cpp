@@ -27,7 +27,7 @@ skeleton::skeleton(string skl_dir, int firstName) :
     joints(),
     firstName(firstName)
 {
-    ifstream skl_file(skl_dir);
+    ifstream skl_file(skl_dir.c_str());
 
     if(skl_file.is_open())
     {
